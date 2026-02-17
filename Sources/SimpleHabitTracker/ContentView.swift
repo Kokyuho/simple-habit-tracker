@@ -1,9 +1,13 @@
 import SwiftUI
+import UniformTypeIdentifiers
 
 struct ContentView: View {
     @StateObject private var viewModel = HabitViewModel()
     @State private var showingAddSheet = false
     @State private var showingStats = false
+    @State private var editingHabit: Habit?
+    @State private var draggedDailyHabit: Habit?
+    @State private var draggedWeeklyHabit: Habit?
     
     var body: some View {
         HSplitView {
@@ -29,6 +33,14 @@ struct ContentView: View {
                                 .strikethrough(habit.isCompletedToday, color: .gray)
                                 .foregroundStyle(habit.isCompletedToday ? .gray : .primary)
                             Spacer()
+
+                            Button(action: {
+                                editingHabit = habit
+                            }) {
+                                Image(systemName: "pencil")
+                                    .foregroundColor(.secondary)
+                            }
+                            .buttonStyle(.plain)
                             
                             Button(action: {
                                 withAnimation {
@@ -41,6 +53,19 @@ struct ContentView: View {
                             .buttonStyle(.plain)
                         }
                         .padding(.vertical, 4)
+                        .onDrag {
+                            draggedDailyHabit = habit
+                            return NSItemProvider(object: habit.id.uuidString as NSString)
+                        }
+                        .onDrop(of: [UTType.text], delegate: HabitDropDelegate(
+                            item: habit,
+                            draggedHabit: $draggedDailyHabit,
+                            onMove: { dragged, destination in
+                                withAnimation {
+                                    viewModel.moveDailyHabit(draggedID: dragged.id, to: destination.id)
+                                }
+                            }
+                        ))
                     }
                 }
                 .listStyle(.inset)
@@ -63,6 +88,15 @@ struct ContentView: View {
                                     Text(habit.title)
                                         .font(.headline)
                                     Spacer()
+
+                                    Button(action: {
+                                        editingHabit = habit
+                                    }) {
+                                        Image(systemName: "pencil")
+                                            .foregroundColor(.secondary)
+                                    }
+                                    .buttonStyle(.plain)
+
                                     // Delete button for weekly
                                     Button(action: {
                                         withAnimation {
@@ -113,6 +147,19 @@ struct ContentView: View {
                                 }
                             }
                             .padding(.vertical, 6)
+                            .onDrag {
+                                draggedWeeklyHabit = habit
+                                return NSItemProvider(object: habit.id.uuidString as NSString)
+                            }
+                            .onDrop(of: [UTType.text], delegate: HabitDropDelegate(
+                                item: habit,
+                                draggedHabit: $draggedWeeklyHabit,
+                                onMove: { dragged, destination in
+                                    withAnimation {
+                                        viewModel.moveWeeklyHabit(draggedID: dragged.id, to: destination.id)
+                                    }
+                                }
+                            ))
                         }
                     }
                 }
@@ -142,5 +189,29 @@ struct ContentView: View {
             AddHabitView(viewModel: viewModel)
                 .padding()
         }
+        .sheet(item: $editingHabit) { habit in
+            EditHabitView(viewModel: viewModel, habit: habit)
+                .padding()
+        }
+    }
+}
+
+private struct HabitDropDelegate: DropDelegate {
+    let item: Habit
+    @Binding var draggedHabit: Habit?
+    let onMove: (Habit, Habit) -> Void
+
+    func dropEntered(info: DropInfo) {
+        guard let draggedHabit,
+              draggedHabit.id != item.id else {
+            return
+        }
+
+        onMove(draggedHabit, item)
+    }
+
+    func performDrop(info: DropInfo) -> Bool {
+        draggedHabit = nil
+        return true
     }
 }

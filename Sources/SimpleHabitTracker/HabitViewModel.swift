@@ -44,6 +44,20 @@ class HabitViewModel: ObservableObject {
         habits.append(habit)
     }
 
+    func updateHabit(_ habit: Habit, title: String, type: HabitType, weeklyCount: Int = 1) {
+        guard let index = habits.firstIndex(where: { $0.id == habit.id }) else {
+            return
+        }
+
+        var updatedHabit = habits[index]
+        updatedHabit.title = title.trimmingCharacters(in: .whitespacesAndNewlines)
+        updatedHabit.frequency = type == .daily
+            ? .daily
+            : .weekly(occurrences: max(1, min(7, weeklyCount)))
+
+        habits[index] = updatedHabit
+    }
+
     func updateWeeklyTarget(for habit: Habit, to newTarget: Int) {
         if let index = habits.firstIndex(where: { $0.id == habit.id }) {
             var updatedHabit = habits[index]
@@ -99,6 +113,28 @@ class HabitViewModel: ObservableObject {
         habits.move(fromOffsets: source, toOffset: destination)
     }
 
+    func moveDailyHabit(draggedID: UUID, to destinationID: UUID) {
+        moveFilteredHabitByID(
+            draggedID: draggedID,
+            destinationID: destinationID,
+            isIncluded: { habit in
+                if case .daily = habit.frequency { return true }
+                return false
+            }
+        )
+    }
+
+    func moveWeeklyHabit(draggedID: UUID, to destinationID: UUID) {
+        moveFilteredHabitByID(
+            draggedID: draggedID,
+            destinationID: destinationID,
+            isIncluded: { habit in
+                if case .weekly = habit.frequency { return true }
+                return false
+            }
+        )
+    }
+
     func moveHabit(_ habit: Habit, from source: IndexSet, to destination: Int) {
           // When moving within filtered lists (Daily or Weekly), we need to translate the indices
           // But SwiftUI lists binding to filtered arrays usually just provide offsets within that array.
@@ -113,6 +149,28 @@ class HabitViewModel: ObservableObject {
           // if we display only one list.
           // Since the user asked for 2 columns, drag-reorder might be tricky across columns.
           // We will stick to simple deletion for now in the columns or basic reorder if feasible.
+    }
+
+    private func moveFilteredHabitByID(
+        draggedID: UUID,
+        destinationID: UUID,
+        isIncluded: (Habit) -> Bool
+    ) {
+        var filtered = habits.filter(isIncluded)
+        guard let fromIndex = filtered.firstIndex(where: { $0.id == draggedID }),
+              let toIndex = filtered.firstIndex(where: { $0.id == destinationID }) else {
+            return
+        }
+
+        let targetOffset = toIndex > fromIndex ? toIndex + 1 : toIndex
+        filtered.move(fromOffsets: IndexSet(integer: fromIndex), toOffset: targetOffset)
+
+        var reorderedIterator = filtered.makeIterator()
+        for index in habits.indices {
+            if isIncluded(habits[index]), let nextHabit = reorderedIterator.next() {
+                habits[index] = nextHabit
+            }
+        }
     }
     
     // Legacy toggle (compat) - reroutes
