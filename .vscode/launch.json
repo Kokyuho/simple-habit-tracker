@@ -1,0 +1,24 @@
+{
+  "configurations": [
+    {
+      "type": "swift",
+      "request": "launch",
+      "args": [],
+      "cwd": "${workspaceFolder:simple-habit-tracker}",
+      "name": "Debug SimpleHabitTracker",
+      "target": "SimpleHabitTracker",
+      "configuration": "debug",
+      "preLaunchTask": "swift: Build Debug SimpleHabitTracker"
+    },
+    {
+      "type": "swift",
+      "request": "launch",
+      "args": [],
+      "cwd": "${workspaceFolder:simple-habit-tracker}",
+      "name": "Release SimpleHabitTracker",
+      "target": "SimpleHabitTracker",
+      "configuration": "release",
+      "preLaunchTask": "swift: Build Release SimpleHabitTracker"
+    }
+  ]
+}
