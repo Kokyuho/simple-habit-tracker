@@ -27,6 +27,10 @@ class HabitViewModel: ObservableObject {
     func deleteHabit(at offsets: IndexSet) {
         habits.remove(atOffsets: offsets)
     }
+
+    func move(from source: IndexSet, to destination: Int) {
+        habits.move(fromOffsets: source, toOffset: destination)
+    }
     
     func toggle(_ habit: Habit) {
         if let index = habits.firstIndex(where: { $0.id == habit.id }) {

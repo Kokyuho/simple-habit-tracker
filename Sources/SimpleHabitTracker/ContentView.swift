@@ -3,6 +3,7 @@ import SwiftUI
 struct ContentView: View {
     @StateObject private var viewModel = HabitViewModel()
     @State private var showingAddAlert = false
+    @State private var showingStats = false
     @State private var newHabitTitle = ""
 
     var body: some View {
@@ -21,10 +22,20 @@ struct ContentView: View {
                             .strikethrough(habit.isCompletedToday, color: .gray)
                             .foregroundStyle(habit.isCompletedToday ? .gray : .primary)
                         Spacer()
+                        
+                        Button(action: {
+                            if let index = viewModel.habits.firstIndex(where: { $0.id == habit.id }) {
+                                viewModel.deleteHabit(at: IndexSet(integer: index))
+                            }
+                        }) {
+                            Image(systemName: "trash")
+                                .foregroundColor(.red.opacity(0.7))
+                        }
+                        .buttonStyle(.plain)
                     }
                     .padding(.vertical, 4)
                 }
-                .onDelete(perform: viewModel.deleteHabit)
+                .onMove(perform: viewModel.move)
             }
             .listStyle(.inset)
             
@@ -44,10 +55,14 @@ struct ContentView: View {
         .frame(minWidth: 300, minHeight: 400)
         .toolbar {
             ToolbarItem(placement: .primaryAction) {
-                Button(action: { showingAddAlert = true }) {
-                    Image(systemName: "plus")
+                Button(action: { showingStats = true }) {
+                    Image(systemName: "chart.bar")
+                        .help("Consistency Graph")
                 }
             }
+        }
+        .sheet(isPresented: $showingStats) {
+            StatisticsView(viewModel: viewModel)
         }
         .alert("New Habit", isPresented: $showingAddAlert) {
             TextField("Habit Name", text: $newHabitTitle)

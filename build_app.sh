@@ -44,5 +44,19 @@ cat > "${APP_BUNDLE}/Contents/Info.plist" <<EOF
 EOF
 
 echo "${APP_NAME}.app created successfully!"
-echo "You can move it to your Applications folder or drag it to your Dock."
-echo "To run it now: open ${APP_BUNDLE}"
+
+# Install to /Applications
+INSTALL_PATH="/Applications/${APP_BUNDLE}"
+echo "Installing to ${INSTALL_PATH}..."
+
+# Remove existing app if it exists
+if [ -d "${INSTALL_PATH}" ]; then
+    rm -rf "${INSTALL_PATH}"
+fi
+
+# Move new app to Applications
+mv "${APP_BUNDLE}" "/Applications/"
+
+echo "Installation complete!"
+echo "You can now find ${APP_NAME} in your Applications folder."
+
