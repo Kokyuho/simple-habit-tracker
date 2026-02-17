@@ -7,7 +7,7 @@ A minimal macOS habit tracker built with SwiftUI.
 - Add new habits (Button or Command+N)
 - Check off habits daily (Resets visually each day, keeps history)
 - Delete habits (Swipe or context menu)
-- Persists data automatically
+- Persists data automatically and securely (encrypted at rest in `~/Library/Application Support/SimpleHabitTracker/habits.enc`, key stored in macOS Keychain)
 
 ## How to Build and Run
 

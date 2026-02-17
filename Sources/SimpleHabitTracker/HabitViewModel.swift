@@ -12,8 +12,11 @@ class HabitViewModel: ObservableObject {
         }
     }
     
-    // Key for UserDefaults
-    private let key = "SavedHabits"
+    private let legacyDefaultsKey = "SavedHabits"
+    private let fileManager = FileManager.default
+    private let appSupportFolderName = "SimpleHabitTracker"
+    private let habitsFileName = "habits.json"
+    private let secureStore = SecureHabitStore()
     
     // Derived collections for UI
     var dailyHabits: [Habit] {
@@ -123,15 +126,69 @@ class HabitViewModel: ObservableObject {
     }
     
     private func save() {
-        if let encoded = try? JSONEncoder().encode(habits) {
-            UserDefaults.standard.set(encoded, forKey: key)
+        do {
+            try secureStore.save(habits)
+        } catch {
+            print("Failed to securely save habits: \(error.localizedDescription)")
         }
     }
     
     private func load() {
-        if let data = UserDefaults.standard.data(forKey: key),
-           let decoded = try? JSONDecoder().decode([Habit].self, from: data) {
-            self.habits = decoded
+        if let decoded = try? secureStore.load() {
+            habits = decoded
+            return
         }
+
+        if let decodedLegacyFile = loadLegacyPlaintextFile() {
+            habits = decodedLegacyFile
+            save()
+            removeLegacyPlaintextFileIfPresent()
+            return
+        }
+
+        if let legacyData = UserDefaults.standard.data(forKey: legacyDefaultsKey),
+           let decodedLegacy = try? JSONDecoder().decode([Habit].self, from: legacyData) {
+            habits = decodedLegacy
+            save()
+            UserDefaults.standard.removeObject(forKey: legacyDefaultsKey)
+        }
+    }
+
+    private func loadLegacyPlaintextFile() -> [Habit]? {
+        guard let fileURL = habitsFileURL(),
+              let data = try? Data(contentsOf: fileURL),
+              let decoded = try? JSONDecoder().decode([Habit].self, from: data) else {
+            return nil
+        }
+
+        return decoded
+    }
+
+    private func removeLegacyPlaintextFileIfPresent() {
+        guard let fileURL = habitsFileURL(), fileManager.fileExists(atPath: fileURL.path) else {
+            return
+        }
+
+        do {
+            try fileManager.removeItem(at: fileURL)
+        } catch {
+            print("Failed to remove legacy plaintext habits file: \(error.localizedDescription)")
+        }
+    }
+
+    private func habitsFileURL() -> URL? {
+        guard let appSupportURL = fileManager.urls(for: .applicationSupportDirectory, in: .userDomainMask).first else {
+            return nil
+        }
+
+        let folderURL = appSupportURL.appendingPathComponent(appSupportFolderName, isDirectory: true)
+        do {
+            try fileManager.createDirectory(at: folderURL, withIntermediateDirectories: true)
+        } catch {
+            print("Failed to prepare app support directory: \(error.localizedDescription)")
+            return nil
+        }
+
+        return folderURL.appendingPathComponent(habitsFileName)
     }
 }
